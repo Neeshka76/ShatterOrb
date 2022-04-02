@@ -178,20 +178,12 @@ namespace ShatterOrb
             JointDrive posDrive = new JointDrive
             {
                 positionSpring = 2000,
-                positionDamper = 10000,
-                maximumForce = sword.module.jointMaxForce
-            };
-            JointDrive rotDrive = new JointDrive
-            {
-                positionSpring = 2000,
-                positionDamper = 10000,
+                positionDamper = 100,
                 maximumForce = sword.module.jointMaxForce
             };
             joint.xDrive = posDrive;
             joint.yDrive = posDrive;
             joint.zDrive = posDrive;
-            joint.angularXDrive = rotDrive;
-            joint.angularYZDrive = rotDrive;
         }
 
         public override void OnButtonPressed()
