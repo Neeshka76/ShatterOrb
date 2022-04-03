@@ -806,9 +806,9 @@ public static class Snippet
         }
     }
 
-    public static Vector3 HomingTarget(Rigidbody projectileRb, Vector3 targetPosition, float initialDistance, float forceFactor)
+    public static Vector3 HomingTarget(Rigidbody projectileRb, Vector3 targetPosition, float initialDistance, float forceFactor, float offSetInitialDistance = 0f, float distanceToStick = 0f)
     {
-        return Vector3.Lerp(projectileRb.velocity, (targetPosition - projectileRb.position).normalized * Vector3.Distance(targetPosition, projectileRb.position) * forceFactor, Vector3.Distance(targetPosition, projectileRb.position).Remap01(initialDistance, 2f));
+        return Vector3.Lerp(projectileRb.velocity, (targetPosition - projectileRb.position).normalized * Vector3.Distance(targetPosition, projectileRb.position) * forceFactor, Vector3.Distance(targetPosition, projectileRb.position).Remap01(initialDistance + offSetInitialDistance, distanceToStick));
     }
 
 

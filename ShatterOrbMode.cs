@@ -13,8 +13,8 @@ namespace ShatterOrb
 {
     public class ShatterOrbMode : GrabbedShardMode
     {
-        private float rotation;
-        private float rotation2;
+        private float rotation = 0f;
+        private float rotation2 = 0f;
         private Vector3 originOfOrb;
         private List<Creature> targetCreatures;
         private Dictionary<RagdollPart, Rigidbody> partToShard = new Dictionary<RagdollPart, Rigidbody>();
@@ -23,32 +23,27 @@ namespace ShatterOrb
         private Dictionary<Rigidbody, float> distanceOfTarget = new Dictionary<Rigidbody, float>();
         private List<RagdollPart> targetParts;
         private List<Rigidbody> orbPart;
-        private int numberOfShardPerCreature;
         private bool isTargeting = false;
         private bool isThrowing = false;
         private bool shieldMode = false;
         private int partPicked = 7;
         private float shieldSize = 0.75f;
+        private float orbRadius = 0.2f;
         public override int TargetPartNum() => partPicked;
 
         public override void Enter(Shatterblade.Shatterblade sword)
         {
             orbPart = sword.jointRBs.Where(rb => rb.name != $"Blade_{partPicked}").ToList();
-            Debug.Log("ShatterOrb : Nb part : " + orbPart.Count());
             base.Enter(sword);
             targetCreatures = new List<Creature>();
             targetParts = new List<RagdollPart>();
             isTargeting = false;
             isThrowing = false;
-            foreach (Rigidbody part in orbPart)
-            {
-                sword.rbMap[part].Detach();
-                sword.rbMap[part].Reform();
-            }
         }
 
         public override Vector3 GetPos(int index, Rigidbody rb, BladePart part)
         {
+            originOfOrb = Center() + ForwardDir() * 0.5f;
             if (shieldMode)
             {
                 if (index % 2 == 0)
@@ -66,11 +61,11 @@ namespace ShatterOrb
                 {
                     if (index % 2 == 0)
                     {
-                        return originOfOrb + Quaternion.AngleAxis((float)index / orbPart.Count() * 180f, UpDir()) * Quaternion.AngleAxis((float)index / orbPart.Count() * 360f + rotation, ForwardDir()) * UpDir() * 0.2f;
+                        return originOfOrb + Quaternion.AngleAxis((float)index / orbPart.Count() * 180f, UpDir()) * Quaternion.AngleAxis((float)index / orbPart.Count() * 360f + rotation, ForwardDir()) * UpDir() * orbRadius;
                     }
                     else
                     {
-                        return originOfOrb + Quaternion.AngleAxis((float)index / orbPart.Count() * 180f, -UpDir()) * Quaternion.AngleAxis((float)index / orbPart.Count() * 360f + rotation, ForwardDir()) * -UpDir() * 0.2f;
+                        return originOfOrb + Quaternion.AngleAxis((float)index / orbPart.Count() * 180f, -UpDir()) * Quaternion.AngleAxis((float)index / orbPart.Count() * 360f + rotation, ForwardDir()) * -UpDir() * orbRadius;
                     }
                 }
                 else
@@ -88,10 +83,8 @@ namespace ShatterOrb
         public override void Update()
         {
             base.Update();
-            originOfOrb = Center() + ForwardDir() * .5f;
-            rotation += Time.deltaTime * 480;
-            rotation2 += Time.deltaTime * 720;
-            shieldSize = Snippet.PingPongValue(shieldSize, shieldSize, 5f);
+            rotation += Time.deltaTime * 480f;
+            rotation2 += Time.deltaTime * 720f;
         }
 
         public override void OnTriggerPressed()
@@ -99,44 +92,48 @@ namespace ShatterOrb
             base.OnTriggerPressed();
             if (!isTargeting && !isThrowing)
             {
-                targetCreatures = Snippet.CreatureInRadiusMinusPlayer(originOfOrb, 10f).Where(cr => cr.state != Creature.State.Dead).ToList();
+                targetCreatures = Snippet.CreatureInRadiusMinusPlayer(originOfOrb, 30f).Where(cr => cr.state != Creature.State.Dead).ToList();
                 if (targetCreatures != null)
                 {
                     isTargeting = true;
-                    Debug.Log("ShatterOrb : Targeting true");
                 }
             }
 
-            if (targetCreatures.Count() != 0)
+            if (targetCreatures.Count() != 0 && isTargeting)
             {
-                numberOfShardPerCreature = orbPart.Count() / targetCreatures.Count();
-                if (isTargeting && !isThrowing)
+                int numberOfShardPerCreature = Math.DivRem(orbPart.Count(), targetCreatures.Count(), out int remains);
+                int nbShard = 0;
+                RagdollPart part;
+                foreach (Creature creature in targetCreatures)
                 {
-                    int nbShard = 0;
-                    RagdollPart part;
-                    foreach (Creature creature in targetCreatures)
+                    for (int i = 0; i < numberOfShardPerCreature; i++)
                     {
-                        for (int i = 0; i < numberOfShardPerCreature; i++)
+                        part = creature.GetRandomRagdollPart();
+                        partToShard[part] = orbPart[nbShard];
+                        shardToPart[partToShard[part]] = part;
+                        initialDistanceOfTarget[orbPart[nbShard]] = Vector3.Distance(part.transform.position, sword.rbMap[orbPart[nbShard]].item.rb.position);
+                        distanceOfTarget[orbPart[nbShard]] = initialDistanceOfTarget[orbPart[nbShard]];
+                        sword.rbMap[orbPart[nbShard]].Detach();
+                        nbShard++;
+                    }
+                    if(remains != 0 && (targetCreatures.Count() - 1) == targetCreatures.LastIndexOf(creature))
+                    {
+                        for (int i = 0; i < remains; i++)
                         {
                             part = creature.GetRandomRagdollPart();
                             partToShard[part] = orbPart[nbShard];
                             shardToPart[partToShard[part]] = part;
-                            initialDistanceOfTarget[orbPart[nbShard]] = Vector3.Distance(part.transform.position, originOfOrb);
+                            initialDistanceOfTarget[orbPart[nbShard]] = Vector3.Distance(part.transform.position, sword.rbMap[orbPart[nbShard]].item.rb.position);
                             distanceOfTarget[orbPart[nbShard]] = initialDistanceOfTarget[orbPart[nbShard]];
                             sword.rbMap[orbPart[nbShard]].Detach();
                             nbShard++;
                         }
-                        if (nbShard > orbPart.Count())
-                        {
-                            isThrowing = true;
-                            isTargeting = false;
-                            Debug.Log("ShatterOrb : Throwing true");
-                            break;
-                        }
                     }
-                    foreach (Rigidbody rigidbody in orbPart)
+                    if (nbShard >= orbPart.Count())
                     {
-                        Debug.Log("ShatterOrb Part : " + shardToPart[rigidbody].name + " ; Shard : " + sword.rbMap[rigidbody].name);
+                        isThrowing = true;
+                        isTargeting = false;
+                        break;
                     }
                 }
             }
@@ -145,40 +142,37 @@ namespace ShatterOrb
         public override void OnTriggerHeld()
         {
             base.OnTriggerHeld();
-            if (isThrowing)
+            if(isThrowing)
             {
                 foreach (Rigidbody rb in orbPart)
                 {
-
                     distanceOfTarget[rb] = Vector3.Distance(sword.rbMap[rb].item.rb.position, shardToPart[rb].transform.position);
-                    sword.rbMap[rb].item.rb.velocity = Snippet.HomingTarget(sword.rbMap[rb].item.rb, shardToPart[rb].transform.position, initialDistanceOfTarget[rb], 60f);
+                    sword.rbMap[rb].item.rb.velocity = Snippet.HomingTarget(sword.rbMap[rb].item.rb, shardToPart[rb].transform.position, initialDistanceOfTarget[rb], 50f, orbRadius);
                     sword.rbMap[rb].item.Throw(1, Item.FlyDetection.Forced);
                 }
-                isThrowing = false;
             }
         }
 
         public override void OnTriggerReleased()
         {
             base.OnTriggerReleased();
-            isTargeting = false;
-            isThrowing = false;
-            Debug.Log("ShatterOrb : Throwing false");
+            foreach (Rigidbody rb in orbPart)
+            {
+                sword.rbMap[rb].Reform();
+            }
             targetCreatures.Clear();
             targetParts.Clear();
             initialDistanceOfTarget.Clear();
-            foreach (Rigidbody part in orbPart)
-            {
-                sword.rbMap[part].Reform();
-            }
+            isTargeting = false;
+            isThrowing = false;
         }
 
         public override void JointModifier(ConfigurableJoint joint, BladePart part)
         {
             JointDrive posDrive = new JointDrive
             {
-                positionSpring = 2000,
-                positionDamper = 100,
+                positionSpring = 4000,
+                positionDamper = 300,
                 maximumForce = sword.module.jointMaxForce
             };
             joint.xDrive = posDrive;
