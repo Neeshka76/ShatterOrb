@@ -17,9 +17,9 @@ namespace ShatterOrb
         private int partPicked = 6;
         private float distanceBetweenPart = 0.1f;
         private List<Rigidbody> hammerHeadPart;
-        private List<int> nbHammerHeadPart = new List<int>{ 1, 2, 3, 8 };
-        private List<int> nbHammerBodyPart = new List<int>{ 4, 5, 7, 9, 11};
-        private List<int> nbHammerHandlePart = new List<int>{ 10, 12, 13, 14, 15 };
+        private List<int> nbHammerHeadPart = new List<int> { 1, 2, 3, 8 };
+        private List<int> nbHammerBodyPart = new List<int> { 4, 5, 7, 9, 11 };
+        private List<int> nbHammerHandlePart = new List<int> { 10, 12, 13, 14, 15 };
         private Vector3 originOfHead;
         private Vector3 originOfBody;
         private Vector3 originOfHandle;
@@ -38,7 +38,7 @@ namespace ShatterOrb
             base.Enter(sword);
             hammerHeadPart = new List<Rigidbody>();
             int i = 1;
-            foreach(Rigidbody rb in jointParts)
+            foreach (Rigidbody rb in jointParts)
             {
                 if (nbHammerHeadPart.Contains(i))
                 {
@@ -52,7 +52,7 @@ namespace ShatterOrb
         {
             originOfHead = Center() + UpDir() * 0.75f;
             originOfBody = Center() + UpDir() * 0.25f;
-            originOfHandle = Center() +  UpDir() * -0.25f;
+            originOfHandle = Center() + UpDir() * -0.25f;
             if (nbHammerHeadPart.Contains(index))
             {
                 return originOfHead;
@@ -78,10 +78,6 @@ namespace ShatterOrb
             }
             else
             {
-                if(nbHammerHandlePart.IndexOf(index) == 1)
-                {
-                    //Debug.Log($"Gravity Hammer : Value of rotation : {rotation}");
-                }
                 return originOfHandle + Quaternion.AngleAxis((float)(nbHammerHandlePart.IndexOf(index)) / (nbHammerHandlePart.Count()) * 360f + rotation, ForwardDir()) * UpDir() * handleRadius;
             }
         }
@@ -126,14 +122,14 @@ namespace ShatterOrb
             // On terrain hit
             if (!hit.targetColliderGroup?.collisionHandler?.item && !hit.targetColliderGroup?.collisionHandler?.ragdollPart)
             {
-
+                Debug.Log("Boom !");
             }
         }
 
         public override void OnTriggerReleased()
         {
             base.OnTriggerReleased();
-            foreach(Rigidbody rb in hammerHeadPart)
+            foreach (Rigidbody rb in hammerHeadPart)
             {
                 sword.rbMap[rb].item.mainCollisionHandler.OnCollisionStartEvent -= Part_OnCollisionStartEvent;
                 Debug.Log($"Gravity Hammer : Event destroyed : {hammerHeadPart.IndexOf(rb)}");

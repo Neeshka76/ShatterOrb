@@ -16,7 +16,7 @@ namespace SnippetCode
 {
     public static class SnippetCode
     {
-        
+
     }
 }
 
@@ -729,13 +729,13 @@ public static class Snippet
         foreach (RagdollPart ragdollPart1 in ragdollPartsHit)
         {
             thisRadius = (ragdollPart1.transform.position - origin).sqrMagnitude;
-            if(thisRadius > lastRadius)
+            if (thisRadius > lastRadius)
             {
                 lastRadius = thisRadius;
                 lastRagdollPart = ragdollPart1;
             }
         }
-        if(lastRagdollPart != null)
+        if (lastRagdollPart != null)
         {
             return lastRagdollPart.ragdoll.creature;
         }
@@ -761,13 +761,13 @@ public static class Snippet
         foreach (Creature creature in creaturesHit)
         {
             thisRadius = (creature.transform.position - origin).sqrMagnitude;
-            if(thisRadius > lastRadius)
+            if (thisRadius > lastRadius)
             {
                 lastRadius = thisRadius;
                 lastCreature = creature;
             }
         }
-        if(lastCreature != null)
+        if (lastCreature != null)
         {
             return lastCreature;
         }
@@ -965,7 +965,7 @@ public static class Snippet
         }
         public void Dispose()
         {
-            if(creature != null)
+            if (creature != null)
             {
                 creature.animator.speed = orgAnimatorSpeed;
                 creature.locomotion.speed = orgLocomotionSpeed;

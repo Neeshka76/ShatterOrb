@@ -116,7 +116,7 @@ namespace ShatterOrb
                         sword.rbMap[orbPart[nbShard]].Detach();
                         nbShard++;
                     }
-                    if(remains != 0 && (targetCreatures.Count() - 1) == targetCreatures.LastIndexOf(creature))
+                    if (remains != 0 && (targetCreatures.Count() - 1) == targetCreatures.LastIndexOf(creature))
                     {
                         for (int i = 0; i < remains; i++)
                         {
@@ -142,7 +142,7 @@ namespace ShatterOrb
         public override void OnTriggerHeld()
         {
             base.OnTriggerHeld();
-            if(isThrowing)
+            if (isThrowing)
             {
                 foreach (Rigidbody rb in orbPart)
                 {
