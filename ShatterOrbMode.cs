@@ -169,15 +169,8 @@ namespace ShatterOrb
 
         public override void JointModifier(ConfigurableJoint joint, BladePart part)
         {
-            JointDrive posDrive = new JointDrive
-            {
-                positionSpring = 4000,
-                positionDamper = 300,
-                maximumForce = sword.module.jointMaxForce
-            };
-            joint.xDrive = posDrive;
-            joint.yDrive = posDrive;
-            joint.zDrive = posDrive;
+            base.JointModifier(joint, part);
+            joint.massScale = 100f;
         }
 
         public override void OnButtonPressed()
@@ -187,6 +180,7 @@ namespace ShatterOrb
         }
 
         public override bool ShouldReform(BladePart part) => part == sword.GetPart(partPicked);
+
 
     }
 }
