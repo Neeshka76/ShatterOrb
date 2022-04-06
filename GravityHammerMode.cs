@@ -142,6 +142,29 @@ namespace ShatterOrb
             rotation += Time.deltaTime * 80f;
         }
 
+        public override void JointModifier(ConfigurableJoint joint, BladePart part)
+        {
+            JointDrive posDrive = new JointDrive
+            {
+                positionSpring = 2000,
+                positionDamper = 40,
+                maximumForce = sword.module.jointMaxForce
+            };
+            JointDrive rotDrive = new JointDrive
+            {
+                positionSpring = 1000,
+                positionDamper = 40,
+                maximumForce = sword.module.jointMaxForce
+            };
+            joint.xDrive = posDrive;
+            joint.yDrive = posDrive;
+            joint.zDrive = posDrive;
+            joint.angularXDrive = rotDrive;
+            joint.angularYZDrive = rotDrive;
+            joint.massScale = 20f;
+            base.JointModifier(joint, part);
+        }
+
         public override void Exit()
         {
             base.Exit();

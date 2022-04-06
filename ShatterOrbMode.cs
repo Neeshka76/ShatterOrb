@@ -169,8 +169,25 @@ namespace ShatterOrb
 
         public override void JointModifier(ConfigurableJoint joint, BladePart part)
         {
+            JointDrive posDrive = new JointDrive
+            {
+                positionSpring = 10000,
+                positionDamper = 10,
+                maximumForce = sword.module.jointMaxForce
+            };
+            JointDrive rotDrive = new JointDrive
+            {
+                positionSpring = 10000,
+                positionDamper = 10,
+                maximumForce = sword.module.jointMaxForce
+            };
+            joint.xDrive = posDrive;
+            joint.yDrive = posDrive;
+            joint.zDrive = posDrive;
+            joint.angularXDrive = rotDrive;
+            joint.angularYZDrive = rotDrive;
+            joint.massScale = 20f;
             base.JointModifier(joint, part);
-            joint.massScale = 100f;
         }
 
         public override void OnButtonPressed()

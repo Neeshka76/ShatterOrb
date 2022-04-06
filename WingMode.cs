@@ -17,9 +17,11 @@ namespace ShatterOrb
         private List<int> nbMainWing = new List<int> { 1, 2, 3, 9, 10, 11, 15 };
         private List<int> nbOtherWing = new List<int> { 4, 5, 7, 8, 12, 13, 14 };
         private float spanOfWing = 1.0f;
+        private float spanBetweenParts = 0.2f;
         private bool canFly = false;
         private bool flightMode = false;
         private Vector3 playerGravity;
+        private float dragsOriValue;
 
         public RagdollHand OtherHand() => GetPart().item.mainHandler.otherHand;
 
@@ -43,6 +45,7 @@ namespace ShatterOrb
         {
             base.Enter(sword);
             playerGravity = Physics.gravity;
+            dragsOriValue = Player.local.creature.locomotion.rb.drag;
         }
 
         public override Vector3 GetPos(int index, Rigidbody rb, BladePart part)
@@ -51,36 +54,40 @@ namespace ShatterOrb
             {
                 if (nbMainWing.IndexOf(index) == 0)
                 {
-                    return Center() + ForwardDir() * spanOfWing / 3f;
+                    return Center() + ForwardDir() * spanOfWing * (1f / 3f);
                 }
                 else if (nbMainWing.IndexOf(index) == 1 || nbMainWing.IndexOf(index) == 2)
                 {
                     if (nbMainWing.IndexOf(index) == 1)
                     {
-                        return Center() + ForwardDir() * spanOfWing / 2f;
+                        return Center() + ForwardDir() * spanOfWing * (2f / 3f);
                     }
                     else
                     {
-                        return Center() + ForwardDir() * spanOfWing / 2f + SideDir() * 0.15f;
+                        return Center() + ForwardDir() * spanOfWing * (2f / 3f) + UpDir() * spanBetweenParts;
                     }
                 }
                 else
                 {
                     if (nbMainWing.IndexOf(index) == 3)
                     {
-                        return Center() + ForwardDir() * spanOfWing / 1f;
+                        return Center() + ForwardDir() * spanOfWing * (3f / 3f);
                     }
                     else if (nbMainWing.IndexOf(index) == 4)
                     {
-                        return Center() + ForwardDir() * spanOfWing / 1f + SideDir() * 0.15f;
+                        return Center() + ForwardDir() * spanOfWing * (3f / 3f) + UpDir() * spanBetweenParts;
                     }
                     else if (nbMainWing.IndexOf(index) == 5)
                     {
-                        return Center() + ForwardDir() * spanOfWing / 1f + SideDir() * (-0.15f);
+                        return Center() + ForwardDir() * spanOfWing * (3f / 3f) + UpDir() * (-spanBetweenParts);
                     }
                     else if (nbMainWing.IndexOf(index) == 6)
                     {
-                        return Center() + ForwardDir() * spanOfWing / 1f + SideDir() * 0.15f * 2f;
+                        return Center() + ForwardDir() * spanOfWing * (3f / 3f) + UpDir() * spanBetweenParts * 2f;
+                    }
+                    else
+                    {
+                        return Center() + ForwardDir() * spanOfWing * (3f / 3f) + UpDir() * (-spanBetweenParts) * 2f;
                     }
                 }
             }
@@ -88,15 +95,41 @@ namespace ShatterOrb
             {
                 if (nbOtherWing.IndexOf(index) == 0)
                 {
-                    return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing / 3f;
+                    return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (1f / 3f);
                 }
                 else if (nbOtherWing.IndexOf(index) == 1 || nbOtherWing.IndexOf(index) == 2)
                 {
-                    return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing / 2f;
+                    if (nbOtherWing.IndexOf(index) == 1)
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (2f / 3f);
+                    }
+                    else
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (2f / 3f) + UpDirOtherHand() * spanBetweenParts;
+                    }
                 }
                 else
                 {
-                    return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing / 1f;
+                    if (nbOtherWing.IndexOf(index) == 3)
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (3f / 3f);
+                    }
+                    else if (nbOtherWing.IndexOf(index) == 4)
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (3f / 3f) + UpDirOtherHand() * spanBetweenParts;
+                    }
+                    else if (nbOtherWing.IndexOf(index) == 5)
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (3f / 3f) + UpDirOtherHand() * (-spanBetweenParts);
+                    }
+                    else if (nbOtherWing.IndexOf(index) == 6)
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (3f / 3f) + UpDirOtherHand() * spanBetweenParts * 2f;
+                    }
+                    else
+                    {
+                        return CenterOtherHand() + ForwardDirOtherHand() * spanOfWing * (3f / 3f) + UpDirOtherHand() * (-spanBetweenParts) * 2f;
+                    }
                 }
             }
         }
@@ -105,11 +138,11 @@ namespace ShatterOrb
         {
             if (nbMainWing.Contains(index))
             {
-                return Quaternion.LookRotation(ForwardDir(), rb.transform.position - Center());
+                return Quaternion.LookRotation(UpDir(), rb.transform.position - Center());
             }
             else
             {
-                return Quaternion.LookRotation(ForwardDirOtherHand(), rb.transform.position - CenterOtherHand());
+                return Quaternion.LookRotation(UpDirOtherHand(), rb.transform.position - CenterOtherHand());
             }
         }
 
@@ -118,7 +151,6 @@ namespace ShatterOrb
             base.Update();
             if (flightMode)
             {
-                Player.local.locomotion.rb.AddForce(-playerGravity / 2);
                 int i = 1;
                 foreach (BladePart parts in sword.parts)
                 {
@@ -127,26 +159,61 @@ namespace ShatterOrb
                         && (nbMainWing.Contains(i) && Hand().Velocity().sqrMagnitude > 10f || nbOtherWing.Contains(i) && OtherHand().Velocity().sqrMagnitude > 10f);
                     if (canFly)
                     {
-                        //Player.local.locomotion.rb.AddForce(Vector3.ProjectOnPlane(parts.item.rb.velocity * 1f, Player.local.creature.transform.right), ForceMode.Impulse);
-                        // use Dot product for the 
                         if (Player.local.creature.locomotion.isGrounded)
                         {
                             Player.local.locomotion.rb.AddForce(-parts.item.rb.velocity * 2f, ForceMode.Impulse);
                         }
                         else
                         {
-                            Player.local.locomotion.rb.AddForce(-parts.item.rb.velocity * 1f, ForceMode.Impulse);
+                            Player.local.locomotion.rb.AddForce(-parts.item.rb.velocity * 2f / 2f, ForceMode.Impulse);
                         }
                     }
                     i++;
+                }
+                Debug.Log($"Wing Mode : Hands : { Vector3.Dot(ForwardDir(), ForwardDirOtherHand())}");
+                if (Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) > -1f && Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) < -0.5f && Vector3.Distance(Hand().transform.position, OtherHand().transform.position) > .75f)
+                {
+                    Player.local.locomotion.rb.drag = 5f;
+                }
+                else
+                {
+                    if (Player.local.locomotion.rb.drag != dragsOriValue)
+                    {
+                        Player.local.locomotion.rb.drag = dragsOriValue;
+                    }
+
+                }
+            }
+            else
+            {
+                if (Player.local.locomotion.rb.drag != dragsOriValue)
+                {
+                    Player.local.locomotion.rb.drag = dragsOriValue;
                 }
             }
         }
 
         public override void JointModifier(ConfigurableJoint joint, BladePart part)
         {
-            base.JointModifier(joint, part);
+            JointDrive posDrive = new JointDrive
+            {
+                positionSpring = 10000,
+                positionDamper = 10,
+                maximumForce = sword.module.jointMaxForce
+            };
+            JointDrive rotDrive = new JointDrive
+            {
+                positionSpring = 10000,
+                positionDamper = 10,
+                maximumForce = sword.module.jointMaxForce
+            };
+            joint.xDrive = posDrive;
+            joint.yDrive = posDrive;
+            joint.zDrive = posDrive;
+            joint.angularXDrive = rotDrive;
+            joint.angularYZDrive = rotDrive;
             joint.massScale = 20f;
+            base.JointModifier(joint, part);
         }
 
         public override void OnTriggerPressed()

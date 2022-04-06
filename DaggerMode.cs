@@ -35,5 +35,28 @@ namespace ShatterOrb
         {
             return Quaternion.LookRotation(ForwardDir(), rb.transform.position - Center());
         }
+
+        public override void JointModifier(ConfigurableJoint joint, BladePart part)
+        {
+            JointDrive posDrive = new JointDrive
+            {
+                positionSpring = 1000,
+                positionDamper = 5,
+                maximumForce = sword.module.jointMaxForce
+            };
+            JointDrive rotDrive = new JointDrive
+            {
+                positionSpring = 1000,
+                positionDamper = 5,
+                maximumForce = sword.module.jointMaxForce
+            };
+            joint.xDrive = posDrive;
+            joint.yDrive = posDrive;
+            joint.zDrive = posDrive;
+            joint.angularXDrive = rotDrive;
+            joint.angularYZDrive = rotDrive;
+            joint.massScale = 20f;
+            base.JointModifier(joint, part);
+        }
     }
 }
