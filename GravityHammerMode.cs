@@ -18,12 +18,21 @@ namespace ShatterOrb
         private float distanceBetweenPart = 0.1f;
         private List<Rigidbody> hammerHeadPart;
         private List<int> nbHammerHeadPart = new List<int> { 1, 2, 3, 8 };
-        private List<int> nbHammerBodyPart = new List<int> { 4, 5, 7, 9, 11 };
-        private List<int> nbHammerHandlePart = new List<int> { 10, 12, 13, 14, 15 };
+        private List<int> nbHammerBodyPart = new List<int> { 4, 5, 6, 7, 10 };
+        private List<int> nbHammerHandlePart = new List<int> { 9, 11, 12, 13, 14 };
         private Vector3 originOfHead;
         private Vector3 originOfBody;
         private Vector3 originOfHandle;
         private float handleRadius = 0.1f;
+        public float radiusOfImpact = 3f;
+        private float cooldownEffect = 0.75f;
+        private float lastTimeEffect;
+        public string imbueHitGroundEffectId;
+        private EffectData imbueHitGroundEffectData;
+        private EffectInstance effectInstance;
+        private bool effectIsPlaying = false;
+
+
 
         public override void OnItemLoaded(Item item) { base.OnItemLoaded(item); }
         public override int TargetPartNum() => partPicked;
@@ -46,6 +55,7 @@ namespace ShatterOrb
                 }
                 i++;
             }
+            imbueHitGroundEffectData = Catalog.GetData<EffectData>(imbueHitGroundEffectId);
         }
 
         public override Vector3 GetPos(int index, Rigidbody rb, BladePart part)
@@ -100,13 +110,12 @@ namespace ShatterOrb
             foreach (Rigidbody rb in hammerHeadPart)
             {
                 sword.rbMap[rb].item.mainCollisionHandler.OnCollisionStartEvent += Part_OnCollisionStartEvent;
-                Debug.Log($"Gravity Hammer : Event created : {hammerHeadPart.IndexOf(rb)}");
             }
         }
 
         private void Part_OnCollisionStartEvent(CollisionInstance hit)
         {
-            Debug.Log($"Gravity Hammer : hit intensity  : {hit.intensity}");
+            //Debug.Log($"Gravity Hammer : hit intensity  : {hit.intensity}");
             if (hit.targetColliderGroup?.collisionHandler?.ragdollPart is RagdollPart ragdollPart && ragdollPart.ragdoll.creature != Player.local.creature && hit.intensity > 0.25f)
             {
                 if (ragdollPart.ragdoll.creature.state == Creature.State.Alive && ragdollPart.ragdoll.creature.state != Creature.State.Destabilized)
@@ -115,14 +124,36 @@ namespace ShatterOrb
                 }
                 foreach (Rigidbody rigidbody in ragdollPart.ragdoll.parts.Select(part => part.rb))
                 {
-                    rigidbody.AddForce(hit.impactVelocity.normalized * 5f, ForceMode.VelocityChange);
+                    rigidbody.AddForce(hit.impactVelocity / 2f, ForceMode.VelocityChange);
                 }
             }
-            // Finish Explosive shockwave !
             // On terrain hit
             if (!hit.targetColliderGroup?.collisionHandler?.item && !hit.targetColliderGroup?.collisionHandler?.ragdollPart)
             {
-                Debug.Log("Boom !");
+                foreach(Item item in Snippet.ItemsInRadius(hit.contactPoint, radiusOfImpact).Where(item => !item.rb.isKinematic))
+                {
+                    item.rb.AddExplosionForce(Vector3.Distance(hit.contactPoint, item.transform.position) * hit.impactVelocity.magnitude * (item.rb.mass < 2f ? 2f : item.rb.mass) / 2f, hit.contactPoint, radiusOfImpact, 1f, ForceMode.Impulse);
+                }
+                foreach(Creature creature in Snippet.CreaturesInRadiusMinusPlayer(hit.contactPoint, radiusOfImpact))
+                {
+                    if(creature.state == Creature.State.Alive && creature.state != Creature.State.Destabilized)
+                    {
+                        creature.ragdoll.SetState(Ragdoll.State.Destabilized, true);
+                    }
+                    foreach(RagdollPart part in creature.ragdoll.parts)
+                    {
+                        part.rb.AddExplosionForce(Vector3.Distance(hit.contactPoint, part.ragdoll.creature.transform.position) * hit.impactVelocity.magnitude * 2f, hit.contactPoint, radiusOfImpact, 1f, ForceMode.Impulse);
+                    }
+                }
+                float t = Mathf.InverseLerp(4f, 15f, hit.impactVelocity.magnitude);
+                if (!effectIsPlaying)
+                {
+                    effectInstance = imbueHitGroundEffectData.Spawn(hit.contactPoint, Quaternion.LookRotation(-hit.contactNormal, hit.sourceColliderGroup.transform.up));
+                    effectInstance.Play();
+                    effectInstance.SetIntensity(t);
+                    lastTimeEffect = Time.time;
+                    effectIsPlaying = true;
+                }
             }
         }
 
@@ -132,7 +163,7 @@ namespace ShatterOrb
             foreach (Rigidbody rb in hammerHeadPart)
             {
                 sword.rbMap[rb].item.mainCollisionHandler.OnCollisionStartEvent -= Part_OnCollisionStartEvent;
-                Debug.Log($"Gravity Hammer : Event destroyed : {hammerHeadPart.IndexOf(rb)}");
+                //Debug.Log($"Gravity Hammer : Event destroyed : {hammerHeadPart.IndexOf(rb)}");
             }
         }
 
@@ -140,6 +171,10 @@ namespace ShatterOrb
         {
             base.Update();
             rotation += Time.deltaTime * 80f;
+            if((lastTimeEffect < Time.time - cooldownEffect) && effectIsPlaying)
+            {
+                effectIsPlaying = false;
+            }
         }
 
         public override void JointModifier(ConfigurableJoint joint, BladePart part)

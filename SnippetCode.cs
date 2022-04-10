@@ -1,14 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Reflection;
-using System.Threading.Tasks;
 using ThunderRoad;
 using UnityEngine;
-using SnippetCode;
-using System.Collections;
-using Object = System.Object;
 using Random = UnityEngine.Random;
 
 
@@ -145,6 +140,8 @@ public static class Snippet
     /// </summary>
     public static Vector3 PosAboveBackOfHand(this RagdollHand hand, float factor = 1f) => hand.transform.position - hand.transform.right * 0.1f * factor + hand.transform.forward * 0.2f * factor;
 
+    public static Quaternion GetFlyDirRefLocalRotation(this Item item) => Quaternion.Inverse(item.transform.rotation) * item.flyDirRef.rotation;
+
     public static void SetVFXProperty<T>(this EffectInstance effect, string name, T data)
     {
         if (effect == null)
@@ -247,17 +244,44 @@ public static class Snippet
 
     public static Vector3 GetChest(this Creature creature) => Vector3.Lerp(creature.GetTorso().transform.position,
         creature.GetHead().transform.position, 0.5f);
-    public static IEnumerable<Creature> CreaturesInRadius(this Vector3 position, float radius)
+    public static IEnumerable<Creature> CreaturesInRadius(this Vector3 position, float radius, bool targetDeadCreature = false, bool targetPlayer = false)
     {
-        return Creature.allActive.Where(creature => (creature.GetChest() - position).sqrMagnitude < radius * radius);
+        return Creature.allActive.Where(creature => ((creature.GetChest() - position).sqrMagnitude < radius * radius) && (targetDeadCreature ? true : creature.state != Creature.State.Dead) && (targetPlayer ? true : !creature.isPlayer));
     }
 
-    public static IEnumerable<Creature> CreatureInRadiusMinusPlayer(this Vector3 position, float radius)
+    public static IEnumerable<Creature> CreaturesInRadiusMinusPlayer(this Vector3 position, float radius)
     {
         return Creature.allActive.Where(creature =>
             ((creature.GetChest() - position).sqrMagnitude < radius * radius) && !creature.isPlayer
         );
     }
+
+    public static IEnumerable<Creature> CreaturesInConeRadiusMinusPlayer(this Vector3 position, float radius, Vector3 directionOfCone, float angleOfCone)
+    {
+        List<Creature> creaturesList = Creature.allActive.Where(creature =>
+          ((creature.GetChest() - position).sqrMagnitude < radius * radius) && !creature.isPlayer).ToList();
+        for(int i = creaturesList.Count() - 1; i >= 0; i--)
+        {
+            Vector3 directionTowardT = creaturesList[i].transform.position - position;
+            float angleFromConeCenter = Vector3.Angle(directionTowardT, directionOfCone);
+            if(angleFromConeCenter > (angleOfCone / 2f))
+            {
+                creaturesList.RemoveAt(i);
+            }
+        }
+        return creaturesList.ToList();
+    }
+
+    public static Creature RandomCreatureInRadius(this Vector3 position, float radius, bool targetDeadCreature = false, bool targetPlayer = false, Creature creatureToExclude = null)
+    {
+        List<Creature> creatureDetected = Creature.allActive.Where(creature => ((creature.GetChest() - position).sqrMagnitude < radius * radius) && (targetDeadCreature ? true : creature.state != Creature.State.Dead) && (targetPlayer ? true : !creature.isPlayer)).ToList();
+        if(creatureToExclude != null && creatureDetected.Contains(creatureToExclude) && creatureDetected.Count() > 1)
+        {
+            creatureDetected.Remove(creatureToExclude);
+        }
+        return creatureDetected[Random.Range(0, creatureDetected.Count)];
+    }
+
     public static void Depenetrate(this Item item)
     {
         foreach (var handler in item.collisionHandlers)
@@ -390,6 +414,92 @@ public static class Snippet
     {
         float rotationspeed = 0;
         rotationspeed += Time.deltaTime * speed;
+    }
+
+    public static ConfigurableJoint CreateSimpleJoint(Rigidbody source, Rigidbody target, float spring, float damper)
+    {
+        Quaternion orgRotation = source.transform.rotation;
+        source.transform.rotation = target.transform.rotation;
+        var joint = source.gameObject.AddComponent<ConfigurableJoint>();
+        joint.autoConfigureConnectedAnchor = false;
+        joint.targetRotation = Quaternion.identity;
+        joint.anchor = source.centerOfMass;
+        joint.connectedAnchor = target.centerOfMass;
+        joint.connectedBody = target;
+        JointDrive posDrive = new JointDrive
+        {
+            positionSpring = spring,
+            positionDamper = damper,
+            maximumForce = Mathf.Infinity
+        };
+        JointDrive rotDrive = new JointDrive
+        {
+            positionSpring = 1000,
+            positionDamper = 10,
+            maximumForce = Mathf.Infinity
+        };
+        joint.rotationDriveMode = RotationDriveMode.XYAndZ;
+        joint.xDrive = posDrive;
+        joint.yDrive = posDrive;
+        joint.zDrive = posDrive;
+        joint.angularXDrive = rotDrive;
+        joint.angularYZDrive = rotDrive;
+        source.transform.rotation = orgRotation;
+        joint.angularXMotion = ConfigurableJointMotion.Free;
+        joint.angularYMotion = ConfigurableJointMotion.Free;
+        joint.angularZMotion = ConfigurableJointMotion.Free;
+        joint.xMotion = ConfigurableJointMotion.Free;
+        joint.yMotion = ConfigurableJointMotion.Free;
+        joint.zMotion = ConfigurableJointMotion.Free;
+        return joint;
+    }
+
+    public static ConfigurableJoint CreateSlingshotJoint(Rigidbody source, Rigidbody target, float spring, float damper)
+    {
+        Quaternion orgRotation = source.transform.rotation;
+        //source.transform.rotation = target.transform.rotation;
+        ConfigurableJoint joint = source.gameObject.AddComponent<ConfigurableJoint>();
+        joint.autoConfigureConnectedAnchor = false;
+        joint.targetRotation = Quaternion.identity;
+        //joint.anchor = source.centerOfMass;
+        joint.anchor = Vector3.zero;
+        joint.connectedAnchor = target.centerOfMass;
+        joint.connectedBody = target;
+        JointDrive posDrive = new JointDrive
+        {
+            positionSpring = spring,
+            positionDamper = damper,
+            maximumForce = Mathf.Infinity
+        };
+        JointDrive emptyDrive = new JointDrive
+        {
+            positionSpring = 0f,
+            positionDamper = 0f,
+            maximumForce = Mathf.Infinity
+        };
+        SoftJointLimit softJointLimit = new SoftJointLimit
+        {
+            limit = 0.76f,
+            bounciness = 0f,
+            contactDistance = 0f
+        };
+        joint.linearLimit = softJointLimit;
+        joint.rotationDriveMode = RotationDriveMode.XYAndZ;
+        joint.xDrive = emptyDrive;
+        joint.yDrive = posDrive;
+        joint.zDrive = emptyDrive;
+        joint.angularXDrive = emptyDrive;
+        joint.angularYZDrive = emptyDrive;
+        joint.slerpDrive = emptyDrive;
+        source.transform.rotation = orgRotation;
+        joint.angularXMotion = ConfigurableJointMotion.Locked;
+        joint.angularYMotion = ConfigurableJointMotion.Locked;
+        joint.angularZMotion = ConfigurableJointMotion.Locked;
+        joint.xMotion = ConfigurableJointMotion.Locked;
+        joint.yMotion = ConfigurableJointMotion.Limited;
+        joint.zMotion = ConfigurableJointMotion.Locked;
+        joint.massScale = 15f;
+        return joint;
     }
 
     public static ConfigurableJoint CreateJointToProjectileForCreatureAttraction(this Item projectile, RagdollPart attractedRagdollPart, ConfigurableJoint joint)
@@ -640,6 +750,22 @@ public static class Snippet
             .SelectNotNull(collider => collider.attachedRigidbody?.GetComponent<CollisionHandler>()?.item)
             .Distinct();
     }
+    public static IEnumerable<Item> ItemsInConeRadius(this Vector3 position, float radius, Vector3 directionOfCone, float angleOfCone)
+    {
+        List<Item> itemsList = Physics.OverlapSphere(position, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+            .SelectNotNull(collider => collider.attachedRigidbody?.GetComponent<CollisionHandler>()?.item)
+            .Distinct().ToList();
+        for (int i = itemsList.Count() - 1; i >= 0; i--)
+        {
+            Vector3 directionTowardT = itemsList[i].transform.position - position;
+            float angleFromConeCenter = Vector3.Angle(directionTowardT, directionOfCone);
+            if (angleFromConeCenter > (angleOfCone / 2f))
+            {
+                itemsList.RemoveAt(i);
+            }
+        }
+        return itemsList.ToList();
+    }
 
     public static Item ClosestItemAroundItem(this Item thisItem, float radius)
     {
@@ -777,6 +903,43 @@ public static class Snippet
         }
     }
 
+    /// <summary>
+    /// Get the closestRagdollPart in a radius
+    /// </summary>
+    /// <param name="origin">Origin position</param>
+    /// <param name="radius">Radius of Detection</param>
+    /// <param name="mask">Mask Apply (write it in binary : 0b11111111111) : 1 means get the part, 0 means don't get the part : in the order of the bit from left to right : 
+    /// RightFoot, LeftFoot, RightLeg, LeftLeg, RightHand, LeftHand, RightArm, LeftArm, Torso, Neck, Head</param>
+    public static RagdollPart ClosestRagdollPart(this Vector3 origin, float radius, int mask = 0b11111111111, bool targetDeadCreature = false, bool excludeSameTarget = false, Creature creatureToExclude = null)
+    {
+        float lastRadius = Mathf.Infinity;
+        float thisRadius;
+        RagdollPart lastRagdollPart = null;
+        List<Creature> listCreature = CreaturesInRadius(origin, radius, targetDeadCreature).ToList();
+        if(excludeSameTarget)
+        {
+            for(int i = listCreature.Count() - 1; i >= 0; i--)
+            {
+                if(listCreature[i] == creatureToExclude)
+                {
+                    listCreature.RemoveAt(i);
+                }
+            }
+        }
+        foreach(Creature creature in listCreature)
+        {
+            foreach(RagdollPart part in creature.ragdoll.parts.Where(part => (mask & (int)part.type) > 0))
+            {
+                thisRadius = Vector3.Distance(part.transform.position, origin);
+                if(thisRadius <= lastRadius)
+                {
+                    lastRadius = thisRadius;
+                    lastRagdollPart = part;
+                }
+            }
+        }
+        return lastRagdollPart;
+    }
 
     public static int ReturnNbFreeSlotOnCreature(this Creature creature)
     {
@@ -806,7 +969,7 @@ public static class Snippet
         }
     }
 
-    public static Vector3 HomingTarget(Rigidbody projectileRb, Vector3 targetPosition, float initialDistance, float forceFactor, float offSetInitialDistance = 0f, float distanceToStick = 0f)
+    public static Vector3 HomingTarget(Rigidbody projectileRb, Vector3 targetPosition, float initialDistance, float forceFactor, float offSetInitialDistance = 0.25f, float distanceToStick = 0f)
     {
         return Vector3.Lerp(projectileRb.velocity, (targetPosition - projectileRb.position).normalized * Vector3.Distance(targetPosition, projectileRb.position) * forceFactor, Vector3.Distance(targetPosition, projectileRb.position).Remap01(initialDistance + offSetInitialDistance, distanceToStick));
     }
@@ -815,6 +978,56 @@ public static class Snippet
     public static float PingPongValue(float min, float max, float speed)
     {
         return Mathf.Lerp(min, max, Mathf.PingPong(Time.time * speed, 1));
+    }
+
+
+    // Representation of the curve (roughly)
+    //                                                                                                                  *
+    //                                                                    *
+    //                                                   *
+    //                                          *
+    //                                 *
+    //                          *
+    //                    *
+    //                *
+    //              *
+    //            *
+    //          *
+    //        *
+    //      *
+    //     *
+    //    *
+    //    *
+    //   *
+    //   *
+    //  *  
+    //  * 
+    // *
+    // *
+    //*
+    //*
+
+    public static AnimationCurve CurveSlowDown()
+    {
+        Keyframe[] keyframes;
+        keyframes = new Keyframe[3];
+        keyframes[0] = new Keyframe(0.0f, 0.0f, 0f, 5f);
+        keyframes[1] = new Keyframe(0.25f, 0.75f, 1f, 1f);
+        keyframes[2] = new Keyframe(1.0f, 1.0f, 0f, 0f);
+        return new AnimationCurve(keyframes);
+    }
+
+    public static void SlowDownFallCreature(Creature creature = null, float factor = 3f, float gravityValue = 9.81f)
+    {
+        AnimationCurve curve = CurveSlowDown();
+        if (creature == null)
+        {
+            Player.local.locomotion.rb.AddForce(new Vector3(0f, curve.Evaluate(Mathf.InverseLerp(0f, gravityValue, -Player.local.locomotion.velocity.y)) * gravityValue * factor, 0f), ForceMode.Acceleration);
+        }
+        else
+        {
+            creature.locomotion.rb.AddForce(new Vector3(0f, curve.Evaluate(Mathf.InverseLerp(0f, gravityValue, -creature.locomotion.velocity.y)) * gravityValue * factor, 0f), ForceMode.Acceleration);
+        }
     }
 
 

@@ -20,7 +20,6 @@ namespace ShatterOrb
         private Dictionary<RagdollPart, Rigidbody> partToShard = new Dictionary<RagdollPart, Rigidbody>();
         private Dictionary<Rigidbody, RagdollPart> shardToPart = new Dictionary<Rigidbody, RagdollPart>();
         private Dictionary<Rigidbody, float> initialDistanceOfTarget = new Dictionary<Rigidbody, float>();
-        private Dictionary<Rigidbody, float> distanceOfTarget = new Dictionary<Rigidbody, float>();
         private List<RagdollPart> targetParts;
         private List<Rigidbody> orbPart;
         private bool isTargeting = false;
@@ -92,7 +91,7 @@ namespace ShatterOrb
             base.OnTriggerPressed();
             if (!isTargeting && !isThrowing)
             {
-                targetCreatures = Snippet.CreatureInRadiusMinusPlayer(originOfOrb, 30f).Where(cr => cr.state != Creature.State.Dead).ToList();
+                targetCreatures = Snippet.CreaturesInRadiusMinusPlayer(originOfOrb, 5f).Where(cr => cr.state != Creature.State.Dead).ToList();
                 if (targetCreatures != null)
                 {
                     isTargeting = true;
@@ -112,7 +111,6 @@ namespace ShatterOrb
                         partToShard[part] = orbPart[nbShard];
                         shardToPart[partToShard[part]] = part;
                         initialDistanceOfTarget[orbPart[nbShard]] = Vector3.Distance(part.transform.position, sword.rbMap[orbPart[nbShard]].item.rb.position);
-                        distanceOfTarget[orbPart[nbShard]] = initialDistanceOfTarget[orbPart[nbShard]];
                         sword.rbMap[orbPart[nbShard]].Detach();
                         nbShard++;
                     }
@@ -124,7 +122,6 @@ namespace ShatterOrb
                             partToShard[part] = orbPart[nbShard];
                             shardToPart[partToShard[part]] = part;
                             initialDistanceOfTarget[orbPart[nbShard]] = Vector3.Distance(part.transform.position, sword.rbMap[orbPart[nbShard]].item.rb.position);
-                            distanceOfTarget[orbPart[nbShard]] = initialDistanceOfTarget[orbPart[nbShard]];
                             sword.rbMap[orbPart[nbShard]].Detach();
                             nbShard++;
                         }
@@ -146,7 +143,6 @@ namespace ShatterOrb
             {
                 foreach (Rigidbody rb in orbPart)
                 {
-                    distanceOfTarget[rb] = Vector3.Distance(sword.rbMap[rb].item.rb.position, shardToPart[rb].transform.position);
                     sword.rbMap[rb].item.rb.velocity = Snippet.HomingTarget(sword.rbMap[rb].item.rb, shardToPart[rb].transform.position, initialDistanceOfTarget[rb], 50f, orbRadius);
                     sword.rbMap[rb].item.Throw(1, Item.FlyDetection.Forced);
                 }
@@ -171,16 +167,23 @@ namespace ShatterOrb
         {
             JointDrive posDrive = new JointDrive
             {
-                positionSpring = 10000,
-                positionDamper = 10,
+                positionSpring = 2000,
+                positionDamper = 40,
                 maximumForce = sword.module.jointMaxForce
             };
             JointDrive rotDrive = new JointDrive
             {
-                positionSpring = 10000,
-                positionDamper = 10,
+                positionSpring = 1000,
+                positionDamper = 40,
                 maximumForce = sword.module.jointMaxForce
             };
+            SoftJointLimit softJointLimit = new SoftJointLimit
+            {
+                limit = 0.05f,
+                bounciness = 0f,
+                contactDistance = 0f
+            };
+            joint.linearLimit = softJointLimit;
             joint.xDrive = posDrive;
             joint.yDrive = posDrive;
             joint.zDrive = posDrive;

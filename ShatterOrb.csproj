@@ -127,6 +127,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="SlingshotMode.cs" />
     <Compile Include="GravityHammerMode.cs" />
     <Compile Include="ShatterOrbMode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
