@@ -64,29 +64,30 @@ namespace ShatterOrb
 
         public void OnRagdollHit(RagdollPart ragdollPart, CollisionInstance hit)
         {
-            if (targetMode && (ragdollPart.type == RagdollPart.Type.Neck || ragdollPart.type == RagdollPart.Type.Torso || ragdollPart.type == RagdollPart.Type.Head))
+            if (ragdollPart.ragdoll.creature != Player.local.creature)
             {
-                ragdollPart.ragdoll.headPart.Slice();
-                ragdollPart.ragdoll.creature.Kill();
-                sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
-                targetAcquired = false;
-                firstThrow = false;
-            }
-            if (bounceMode)
-            {
-                sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
-                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 1.2f, ForceMode.VelocityChange);
-                targetAcquired = false;
-                firstThrow = false;
+                if (targetMode && (ragdollPart.type == RagdollPart.Type.Neck || ragdollPart.type == RagdollPart.Type.Torso || ragdollPart.type == RagdollPart.Type.Head))
+                {
+                    ragdollPart.ragdoll.headPart.Slice();
+                    ragdollPart.ragdoll.creature.Kill();
+                    sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
+                    targetAcquired = false;
+                    firstThrow = false;
+                }
+                if (bounceMode)
+                {
+                    sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
+                    sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 1.2f, ForceMode.VelocityChange);
+                    targetAcquired = false;
+                    firstThrow = false;
+                }
             }
         }
 
         public void OnItemHit(Item item, CollisionInstance hit)
         {
-
             if (bounceMode)
             {
-                sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                 sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                 sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 1.2f, ForceMode.VelocityChange);
                 targetAcquired = false;
@@ -97,7 +98,6 @@ namespace ShatterOrb
         {
             if (bounceMode)
             {
-                sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                 sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                 sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 1.2f, ForceMode.VelocityChange);
                 targetAcquired = false;
@@ -249,6 +249,7 @@ namespace ShatterOrb
             else
             {
                 bounceMode = true;
+                Debug.Log("Bounce ON ! ");
             }
         }
 
@@ -256,6 +257,7 @@ namespace ShatterOrb
         {
             base.OnButtonReleased();
             bounceMode = false;
+            Debug.Log("Bounce OFF ! ");
         }
 
 
@@ -291,22 +293,35 @@ namespace ShatterOrb
                         {
                             sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(ForwardDir() * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 4f, ForceMode.Impulse);
                             sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
+                            Debug.Log("First throw");
+                            if (Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, 10f, 0b11111111111) != null)
+                            {
+                                shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, 10f, 0b00000000010);
+                                initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
+                                targetAcquired = true;
+                                Debug.Log("First throw & target acquired");
+                            }
                         }
                         else
                         {
-                           
-                            if (shardToPart.TryGetValue(sword.GetPart(nbProjectileSlingshot).item.rb, out partTarget))
+                            if (partTarget != null)
                             {
-                                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 5f, ForceMode.Impulse);
+                                if (shardToPart.TryGetValue(sword.GetPart(nbProjectileSlingshot).item.rb, out partTarget))
+                                {
+                                    // NULL REFFERENCE when creature is off !
+                                    sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 5f, ForceMode.Impulse);
+                                    Debug.Log("Homing not first throw");
+                                }
                             }
                         }
                         if (shardToPart.TryGetValue(sword.GetPart(nbProjectileSlingshot).item.rb, out partTarget))
                         {
-                            if (Snippet.GetRandomRagdollPart(Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, 10f, false, false, partTarget.ragdoll.creature)) != null)
+                            if (Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, 10f, false, false, partTarget.ragdoll.creature) != null)
                             {
                                 Creature target = Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, 10f, false, false, partTarget.ragdoll.creature);
                                 if (target != null)
                                 {
+                                    Debug.Log("Homing not first throw GET RANDOM PART");
                                     shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.GetRandomRagdollPart(target);
                                     initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
                                     targetAcquired = true;
@@ -316,6 +331,7 @@ namespace ShatterOrb
                     }
                     else
                     {
+                        Debug.Log("No Target !");
                         sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f);
                         sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
                     }

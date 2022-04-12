@@ -274,12 +274,9 @@ public static class Snippet
 
     public static Creature RandomCreatureInRadius(this Vector3 position, float radius, bool targetDeadCreature = false, bool targetPlayer = false, Creature creatureToExclude = null)
     {
-        List<Creature> creatureDetected = Creature.allActive.Where(creature => ((creature.GetChest() - position).sqrMagnitude < radius * radius) && (targetDeadCreature ? true : creature.state != Creature.State.Dead) && (targetPlayer ? true : !creature.isPlayer)).ToList();
-        if(creatureToExclude != null && creatureDetected.Contains(creatureToExclude) && creatureDetected.Count() > 1)
-        {
-            creatureDetected.Remove(creatureToExclude);
-        }
-        return creatureDetected[Random.Range(0, creatureDetected.Count)];
+        List<Creature> creatureDetected = Creature.allActive.Where(creature => creature != creatureToExclude && ((creature.GetChest() - position).sqrMagnitude < radius * radius)
+        && (targetDeadCreature ? true : creature.state != Creature.State.Dead) && (targetPlayer ? true : !creature.isPlayer)).ToList();
+        return creatureDetected.Where(creature => creature == creatureDetected[Random.Range(0, creatureDetected.Count())]).FirstOrDefault();
     }
 
     public static void Depenetrate(this Item item)
@@ -916,19 +913,10 @@ public static class Snippet
         float thisRadius;
         RagdollPart lastRagdollPart = null;
         List<Creature> listCreature = CreaturesInRadius(origin, radius, targetDeadCreature).ToList();
-        if(excludeSameTarget)
-        {
-            for(int i = listCreature.Count() - 1; i >= 0; i--)
-            {
-                if(listCreature[i] == creatureToExclude)
-                {
-                    listCreature.RemoveAt(i);
-                }
-            }
-        }
         foreach(Creature creature in listCreature)
         {
-            foreach(RagdollPart part in creature.ragdoll.parts.Where(part => (mask & (int)part.type) > 0))
+            if (excludeSameTarget && creature == creatureToExclude) continue;
+            foreach (RagdollPart part in creature.ragdoll.parts.Where(part => (mask & (int)part.type) > 0))
             {
                 thisRadius = Vector3.Distance(part.transform.position, origin);
                 if(thisRadius <= lastRadius)
