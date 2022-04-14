@@ -276,13 +276,21 @@ public static class Snippet
     {
         List<Creature> creatureDetected = Creature.allActive.Where(creature => ((creature.GetChest() - position).sqrMagnitude < radius * radius)
         && (targetDeadCreature ? true : creature.state != Creature.State.Dead) && (targetPlayer ? true : !creature.isPlayer)).ToList();
-        if (creatureDetected.Count() < 1 && creatureDetected.Contains(creatureToExclude) && includeCreatureExcludedIfDefault)
+        List<Creature> tempCreatureList;
+
+        if (creatureDetected.Count() <= 1 && creatureDetected.Contains(creatureToExclude) && includeCreatureExcludedIfDefault)
         {
             return creatureDetected.FirstOrDefault();
         }
         else
         {
-            return creatureDetected.Where(creature => creature != creatureToExclude).Where(cr => cr == creatureDetected[Random.Range(0, creatureDetected.Count())]).FirstOrDefault();
+            tempCreatureList = creatureDetected.Where(creature => creature != creatureToExclude).ToList();
+            if (tempCreatureList.Count() != 0)
+            {
+                return tempCreatureList[Random.Range(0, tempCreatureList.Count())];
+            }
+            return tempCreatureList.FirstOrDefault();
+            //return creatureDetected.Where(creature => creature != creatureToExclude).Where(cr => cr == creatureDetected[Random.Range(0, creatureDetected.Count())]).FirstOrDefault();
         }
     }
 
@@ -580,7 +588,7 @@ public static class Snippet
 
     public static void IgnoreCollider(this Ragdoll ragdoll, Collider collider, bool ignore = true)
     {
-        foreach (var part in ragdoll.parts)
+        foreach (RagdollPart part in ragdoll.parts)
         {
             part.IgnoreCollider(collider, ignore);
         }
@@ -588,7 +596,7 @@ public static class Snippet
 
     public static void IgnoreCollider(this RagdollPart part, Collider collider, bool ignore = true)
     {
-        foreach (var itemCollider in part.colliderGroup.colliders)
+        foreach (Collider itemCollider in part.colliderGroup.colliders)
         {
             Physics.IgnoreCollision(collider, itemCollider, ignore);
         }
@@ -596,7 +604,7 @@ public static class Snippet
 
     public static void IgnoreCollider(this Item item, Collider collider, bool ignore)
     {
-        foreach (var cg in item.colliderGroups)
+        foreach (ColliderGroup cg in item.colliderGroups)
         {
             foreach (var itemCollider in cg.colliders)
             {
@@ -644,6 +652,17 @@ public static class Snippet
                 }
             }
             item.ignoredItem = creature.handRight.grabbedHandle.item;
+        }
+    }
+
+    public static void IgnoreCollision(this Item item, bool ignore = true)
+    {
+        foreach (ColliderGroup cg in item.colliderGroups)
+        {
+            foreach (Collider collider in cg.colliders)
+            {
+                collider.enabled = !ignore;
+            }
         }
     }
 

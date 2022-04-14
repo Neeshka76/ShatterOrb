@@ -34,6 +34,7 @@ namespace ShatterOrb
         private float initialDistance;
         private int nbMaxBounce = 4;
         private int nbBounce = 0;
+        private bool disableColliders = false;
 
         public RagdollHand OtherHand() => GetPart().item.mainHandler.otherHand;
 
@@ -52,17 +53,20 @@ namespace ShatterOrb
 
         private void MainCollisionHandler_OnCollisionStartEvent(CollisionInstance hit)
         {
-            if (hit.targetColliderGroup?.collisionHandler?.ragdollPart is RagdollPart ragdollPart && ragdollPart.ragdoll.creature != Player.local.creature)
+            if (shardThrowed)
             {
-                OnRagdollHit(ragdollPart, hit);
-            }
-            else if (hit.targetColliderGroup?.collisionHandler?.item is Item item)
-            {
-                OnItemHit(item, hit);
-            }
-            else
-            {
-                OnOtherHit(hit);
+                if (hit.targetColliderGroup?.collisionHandler?.ragdollPart is RagdollPart ragdollPart && ragdollPart.ragdoll.creature != Player.local.creature)
+                {
+                    OnRagdollHit(ragdollPart, hit);
+                }
+                else if (hit.targetColliderGroup?.collisionHandler?.item is Item item)
+                {
+                    OnItemHit(item, hit);
+                }
+                else
+                {
+                    OnOtherHit(hit);
+                }
             }
         }
 
@@ -85,8 +89,8 @@ namespace ShatterOrb
                     stepBounce = 0;
                     nbBounce++;
                 }
-                justHit = true;
             }
+            justHit = true;
         }
 
         public void OnItemHit(Item item, CollisionInstance hit)
@@ -97,8 +101,8 @@ namespace ShatterOrb
                 sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 0.75f, ForceMode.VelocityChange);
                 stepBounce = 0;
                 nbBounce++;
-                justHit = true;
             }
+            justHit = true;
         }
         public void OnOtherHit(CollisionInstance hit)
         {
@@ -108,8 +112,8 @@ namespace ShatterOrb
                 sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 0.75f, ForceMode.VelocityChange);
                 stepBounce = 0;
                 nbBounce++;
-                justHit = true;
             }
+            justHit = true;
         }
 
         public override Vector3 Center() => Hand().transform.position + Hand().PointDir() * 0.1f;
@@ -217,8 +221,11 @@ namespace ShatterOrb
         public override void OnTriggerReleased()
         {
             base.OnTriggerReleased();
-            targetMode = false;
-            stepTarget = 0;
+            if (!shardThrowed)
+            {
+                targetMode = false;
+                stepTarget = 0;
+            }
         }
 
         public override void OnTriggerHeld()
@@ -236,16 +243,17 @@ namespace ShatterOrb
             else
             {
                 bounceMode = true;
-                Debug.Log("Bounce ON ! ");
             }
         }
 
         public override void OnButtonReleased()
         {
             base.OnButtonReleased();
-            bounceMode = false;
-            stepBounce = 0;
-            Debug.Log("Bounce OFF ! ");
+            if (!shardThrowed)
+            {
+                bounceMode = false;
+                stepBounce = 0;
+            }
         }
 
         private void Reform()
@@ -256,32 +264,36 @@ namespace ShatterOrb
             justHit = false;
             targetMode = false;
             bounceMode = false;
+            disableColliders = true;
             stepBounce = 0;
             stepTarget = 0;
-            Debug.Log("Ask for Reform ! ");
+            nbBounce = 0;
             if (throwJoint != null)
             {
                 UnityEngine.Object.Destroy(throwJoint);
                 throwJoint = null;
             }
+            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Vector3.zero;
             sword.GetPart(nbProjectileSlingshot).Depenetrate();
             sword.GetPart(nbProjectileSlingshot).Reform();
-            Debug.Log("Reformed ! ");
+            sword.GetPart(nbProjectileSlingshot).item.IgnoreCollision();
         }
 
         public override void Update()
         {
             base.Update();
             emptyHandle.transform.position = Center() + UpDir() * spanOfHangle * 5f;
-            //emptyHandle.transform.rotation = Quaternion.LookRotation(ForwardDir(), SideDir());
             emptyHandle.transform.rotation = Quaternion.LookRotation(ForwardDir());
-            //emptyHandle.transform.rotation = Quaternion.LookRotation(ForwardDir(), sword.GetPart(nbProjectileSlingshot).item.rb.transform.position - Center()) * Quaternion.Inverse(sword.GetPart(nbProjectileSlingshot).item.GetFlyDirRefLocalRotation());
+            if(Math.Abs(Vector3.Distance(emptyHandle.transform.position, sword.GetPart(nbProjectileSlingshot).item.transform.position)) < 0.05f && disableColliders)
+            {
+                sword.GetPart(nbProjectileSlingshot).item.IgnoreCollision(false);
+                disableColliders = false;
+            }
             if (sword.GetPart(nbProjectileSlingshot).item.mainHandler == OtherHand() && !grabbedShard)
             {
                 grabbedShard = true;
                 sword.GetPart(nbProjectileSlingshot).Detach();
                 throwJoint = Snippet.CreateSlingshotJoint(sword.GetPart(nbProjectileSlingshot).item.rb, emptyHandle, 130f, 0f);
-                Debug.Log("Detached and jointed");
             }
 
             if (grabbedShard && !shardThrowed && Math.Abs(Vector3.Distance(emptyHandle.transform.position, sword.GetPart(nbProjectileSlingshot).item.transform.position)) < 0.05f && sword.GetPart(nbProjectileSlingshot).item.mainHandler == null)
@@ -289,47 +301,45 @@ namespace ShatterOrb
                 UnityEngine.Object.Destroy(throwJoint);
                 shardThrowed = true;
                 grabbedShard = false;
-                Debug.Log("Unjointed and throwed");
+                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(ForwardDir() * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 5f, ForceMode.Impulse);
+                sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
             }
             if (shardThrowed && !stopThrow)
             {
                 if (bounceMode)
                 {
-                    switch(stepBounce)
+                    switch (stepBounce)
                     {
                         // search for part
                         case 0:
-                            if(Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget, true) != null)
+                            if (Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget, true) != null)
                             {
                                 nbBounce = 0;
-                                creatureTarget = Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget);
+                                creatureTarget = Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget, true);
                                 shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget, 0b11111111111, partTarget);
-                                if(justHit && partTarget != null)
+                                if (justHit && partTarget != null)
                                 {
-                                    sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 1f, ForceMode.Impulse);
+                                    sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 0.1f, ForceMode.Impulse);
                                     justHit = false;
                                 }
                                 partTarget = shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb];
                                 initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
                                 stepBounce = 1;
-                                Debug.Log("First throw & target acquired");
                             }
                             else
                             {
-                                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(ForwardDir() * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 4f, ForceMode.Impulse);
+                                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(sword.GetPart(nbProjectileSlingshot).item.rb.velocity.normalized * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 1f, ForceMode.Impulse);
                                 sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
                                 if (nbBounce >= nbMaxBounce && justHit)
                                 {
                                     Reform();
                                 }
-                                Debug.Log("Just a throw");
                             }
                             break;
-                            // Go to part
+                        // Go to part
                         case 1:
-                            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f);
+                            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 25f, 1f);
                             sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
-                            Debug.Log("Go to part");
                             break;
                     }
                 }
@@ -339,10 +349,7 @@ namespace ShatterOrb
                 }
                 else
                 {
-                    sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(ForwardDir() * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 5f, ForceMode.Impulse);
-                    sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
                     stopThrow = true;
-                    Debug.Log("THROW !");
                 }
             }
         }
@@ -360,28 +367,24 @@ namespace ShatterOrb
                         partTarget = shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb];
                         initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
                         stepTarget = 1;
-                        Debug.Log("First throw & target acquired");
                     }
                     else
                     {
-                        sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(ForwardDir() * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 4f, ForceMode.Impulse);
+                        sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(sword.GetPart(nbProjectileSlingshot).item.rb.velocity.normalized * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 1f, ForceMode.Impulse);
                         sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
                         if (justHit)
                         {
                             Reform();
                         }
-                        Debug.Log("Just a throw");
                     }
                     yield break;
                 // Go to part
                 case 1:
-                    sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f);
+                    sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f, 1f);
                     sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
-                    Debug.Log("Go to part");
                     yield break;
                 // Pause
                 case 2:
-                    Debug.Log("Pause");
                     yield return new WaitForSeconds(0.2f);
                     stepTarget = 0;
                     yield break;
@@ -430,8 +433,10 @@ namespace ShatterOrb
             shardThrowed = false;
             stopThrow = false;
             justHit = true;
+            disableColliders = false;
             stepTarget = 0;
             stepBounce = 0;
+            
             sword.GetPart(nbProjectileSlingshot).item.mainCollisionHandler.OnCollisionStartEvent -= MainCollisionHandler_OnCollisionStartEvent;
         }
 
