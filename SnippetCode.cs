@@ -540,6 +540,43 @@ public static class Snippet
         return joint;
     }
 
+    public static ConfigurableJoint StrongJointFixed(Rigidbody source, Rigidbody target)
+    {
+        ConfigurableJoint joint;
+        joint = source.gameObject.AddComponent<ConfigurableJoint>();
+        joint.autoConfigureConnectedAnchor = false;
+        joint.targetRotation = Quaternion.identity;
+        joint.anchor = Vector3.zero;
+        joint.connectedBody = target;
+        joint.connectedAnchor = Vector3.zero;
+        joint.rotationDriveMode = RotationDriveMode.XYAndZ;
+        JointDrive posDrive = new JointDrive
+        {
+            positionSpring = 2000,
+            positionDamper = 40,
+            maximumForce = 100
+        };
+        JointDrive rotDrive = new JointDrive
+        {
+            positionSpring = 1000,
+            positionDamper = 40,
+            maximumForce = 100
+        };
+        joint.xDrive = posDrive;
+        joint.yDrive = posDrive;
+        joint.zDrive = posDrive;
+        joint.angularXDrive = rotDrive;
+        joint.angularYZDrive = rotDrive;
+        joint.massScale = 30f;
+        joint.angularXMotion = ConfigurableJointMotion.Free;
+        joint.angularYMotion = ConfigurableJointMotion.Free;
+        joint.angularZMotion = ConfigurableJointMotion.Free;
+        joint.xMotion = ConfigurableJointMotion.Free;
+        joint.yMotion = ConfigurableJointMotion.Free;
+        joint.zMotion = ConfigurableJointMotion.Free;
+        return joint;
+    }
+
     public static ConfigurableJoint CreateJointToProjectileForCreatureAttraction(this Item projectile, RagdollPart attractedRagdollPart, ConfigurableJoint joint)
     {
         JointDrive jointDrive = new JointDrive();
@@ -1066,6 +1103,42 @@ public static class Snippet
         }
     }
 
+    public static void ImbueItem(this Item item, string ID)
+    {
+        foreach (Imbue imbue in item.imbues)
+        {
+            SpellCastCharge magic = Catalog.GetData<SpellCastCharge>(ID, true);
+            if (imbue.energy < imbue.maxEnergy)
+            {
+                imbue.Transfer(magic, imbue.maxEnergy);
+            }
+        }
+    }
+
+    public static string returnImbueId(this Item item)
+    {
+        string imbueId = null;
+        foreach(Imbue imbue in item.imbues)
+        {
+            if(imbue.energy > 0.0f)
+            {
+                imbueId = imbue.spellCastBase.id;
+            }
+        }
+        return imbueId;
+    }
+
+    public static void UnImbueItem(this Item item)
+    {
+        foreach (Imbue imbue in item.imbues)
+        {
+            if (imbue.energy < 0.0f)
+            {
+                imbue.energy = 0.0f;
+            }
+        }
+    }
+
 
     public class SlowBehaviour : MonoBehaviour
     {
@@ -1189,7 +1262,6 @@ public static class Snippet
                 {
                     isSlowed = true;
                     creature.GetPart(RagdollPart.Type.Torso).rb.freezeRotation = true;
-                    Debug.Log("Drag : " + creature.ragdoll.parts[0].rb.drag);
                     //creature.brain.Stop();
                     //creature.brain.StopAllCoroutines();
                     //creature.locomotion.MoveStop();

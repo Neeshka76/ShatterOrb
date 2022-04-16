@@ -197,7 +197,33 @@ namespace ShatterOrb
         {
             base.OnButtonPressed();
             shieldMode ^= true;
+            if(shieldMode)
+            {
+                foreach(Rigidbody rb in orbPart)
+                {
+                    sword.rbMap[rb].item.IgnoreRagdollCollision(Player.local.creature.ragdoll);
+                    foreach (ColliderGroup colliderGroup in item.colliderGroups)
+                    {
+                        foreach (Collider collider in colliderGroup.colliders)
+                            Player.local.creature.ragdoll.IgnoreCollision(collider, true);
+                    }
+                    sword.rbMap[rb].item.ignoredRagdoll = Player.local.creature.ragdoll;
+                }
+            }
+            else
+            {
+                foreach (Rigidbody rb in orbPart)
+                {
+                    sword.rbMap[rb].item.ResetRagdollCollision();
+                    sword.rbMap[rb].item.ignoredRagdoll = null;
+                }
+            }
         }
+
+        public override bool GetUseAnnotationShown() => true;
+        public override bool GetAltUseAnnotationShown() => true;
+        public override string GetUseAnnotation() =>  IsTriggerPressed() ? "Now the enemies are likely dead, you can release the trigger button" : "Hold trigger to throw shards toward near enemies";
+        public override string GetAltUseAnnotation() => shieldMode ? "Tap the spell wheel button to reform the orb" : "Tap the spell wheel button to form a shield";
 
         public override bool ShouldReform(BladePart part) => part == sword.GetPart(partPicked);
 

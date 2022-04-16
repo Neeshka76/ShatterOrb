@@ -270,6 +270,10 @@ namespace ShatterOrb
 
             return pos;
         }
+
+        public override string GetUseAnnotation() => "Press trigger of the shard to reverse the dagger; \n Press trigger of the other hand to reverse the other dagger";
+        public override bool GetUseAnnotationShown() => true;
+
         public override void OnTriggerPressed()
         {
             base.OnTriggerPressed();

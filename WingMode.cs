@@ -19,6 +19,7 @@ namespace ShatterOrb
         private bool canPush = false;
         private List<Item> shardsList;
         public float angleOfPush = 45f;
+        private bool gliding;
 
         public RagdollHand OtherHand() => GetPart().item.mainHandler.otherHand;
 
@@ -150,8 +151,8 @@ namespace ShatterOrb
                     }
                     i++;
                 }
-                //Debug.Log($"Wing Mode : Hands : { Vector3.Dot(ForwardDir(), ForwardDirOtherHand())}");
-                if (Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) > -1f && Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) < -0.5f && Vector3.Distance(Hand().transform.position, OtherHand().transform.position) > .75f)
+                gliding = Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) > -1f && Vector3.Dot(ForwardDir(), ForwardDirOtherHand()) < -0.5f && Vector3.Distance(Hand().transform.position, OtherHand().transform.position) > 0.75f;
+                if (gliding)
                 {
                     Snippet.SlowDownFallCreature();
                 }
@@ -235,6 +236,39 @@ namespace ShatterOrb
         {
             base.OnButtonReleased();
             wingPushMode = false;
+        }
+
+        public override bool GetUseAnnotationShown() => true;
+        public override bool GetAltUseAnnotationShown() => true;
+        public override string GetUseAnnotation()
+        {
+            if (flightMode)
+            {
+                if (!Player.local.creature.locomotion.isGrounded)
+                {
+                    return "Flap the wings to fly";
+                }
+                else
+                {
+                    return "You can glide when extending the arms !";
+                }
+            }
+            else
+            {
+                return "When airborne, maintain extend your arms on the side and align them to be able to glide !";
+            }
+
+        }
+        public override string GetAltUseAnnotation()
+        {
+            if (wingPushMode)
+            {
+                return "Flap the wings toward you to push npcs";
+            }
+            else
+            {
+                return "Press the spell wheel button to allow be able to create a push wave";
+            }
         }
 
         public override void Exit()

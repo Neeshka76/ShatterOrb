@@ -115,7 +115,6 @@ namespace ShatterOrb
 
         private void Part_OnCollisionStartEvent(CollisionInstance hit)
         {
-            //Debug.Log($"Gravity Hammer : hit intensity  : {hit.intensity}");
             if (hit.targetColliderGroup?.collisionHandler?.ragdollPart is RagdollPart ragdollPart && ragdollPart.ragdoll.creature != Player.local.creature && hit.intensity > 0.25f)
             {
                 if (ragdollPart.ragdoll.creature.state == Creature.State.Alive && ragdollPart.ragdoll.creature.state != Creature.State.Destabilized)
@@ -163,7 +162,6 @@ namespace ShatterOrb
             foreach (Rigidbody rb in hammerHeadPart)
             {
                 sword.rbMap[rb].item.mainCollisionHandler.OnCollisionStartEvent -= Part_OnCollisionStartEvent;
-                //Debug.Log($"Gravity Hammer : Event destroyed : {hammerHeadPart.IndexOf(rb)}");
             }
         }
 
@@ -199,7 +197,8 @@ namespace ShatterOrb
             joint.massScale = 20f;
             base.JointModifier(joint, part);
         }
-
+        public override string GetUseAnnotation() => IsTriggerPressed() ? "\nHit an enemies to send them flying;\nHit the environnement to create a shockwave" : "Maintain trigger of the shard to empower the tip of the hammer";
+        public override bool GetUseAnnotationShown() => true;
         public override void Exit()
         {
             base.Exit();

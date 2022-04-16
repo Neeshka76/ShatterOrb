@@ -22,7 +22,7 @@ namespace ShatterOrb
         private ConfigurableJoint throwJoint;
         private Rigidbody emptyHandle;
         private float spanOfString = 0.05f;
-        private float spanOfHangle = 0.1f;
+        private float spanOfHandle = 0.1f;
         private bool targetMode = false;
         private bool bounceMode = false;
         private bool grabbedShard = false;
@@ -126,13 +126,13 @@ namespace ShatterOrb
                 switch (nbHandleSlingshot.IndexOf(index))
                 {
                     case 0:
-                        pos = Center() + UpDir() * spanOfHangle * 1f;
+                        pos = Center() + UpDir() * spanOfHandle * 1f;
                         break;
                     case 1:
-                        pos = Center() + UpDir() * spanOfHangle * 2f;
+                        pos = Center() + UpDir() * spanOfHandle * 2f;
                         break;
                     case 2:
-                        pos = Center() + UpDir() * spanOfHangle * 3f;
+                        pos = Center() + UpDir() * spanOfHandle * 3f;
                         break;
                     default:
                         pos = Center();
@@ -144,10 +144,10 @@ namespace ShatterOrb
                 switch (nbLeftHandleSlingshot.IndexOf(index))
                 {
                     case 0:
-                        pos = Center() + UpDir() * spanOfHangle * 4f + SideDir() * spanOfHangle * 2f;
+                        pos = Center() + UpDir() * spanOfHandle * 4f + SideDir() * spanOfHandle * 2f;
                         break;
                     case 1:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfHangle * 3f;
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfHandle * 3f;
                         break;
                     default:
                         pos = Center();
@@ -159,10 +159,10 @@ namespace ShatterOrb
                 switch (nbRightHandleSlingshot.IndexOf(index))
                 {
                     case 0:
-                        pos = Center() + UpDir() * spanOfHangle * 4f + SideDir() * spanOfHangle * (-2f);
+                        pos = Center() + UpDir() * spanOfHandle * 4f + SideDir() * spanOfHandle * (-2f);
                         break;
                     case 1:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfHangle * (-3f);
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfHandle * (-3f);
                         break;
                     default:
                         pos = Center();
@@ -174,22 +174,22 @@ namespace ShatterOrb
                 switch (nbStringSlingshot.IndexOf(index))
                 {
                     case 0:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * 5f;
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * 5f;
                         break;
                     case 1:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * (-5f);
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * (-5f);
                         break;
                     case 2:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * 3.5f;
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * 3.5f;
                         break;
                     case 3:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * (-3.5f);
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * (-3.5f);
                         break;
                     case 4:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * (-2f);
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * (-2f);
                         break;
                     case 5:
-                        pos = Center() + UpDir() * spanOfHangle * 5f + SideDir() * spanOfString * 2f;
+                        pos = Center() + UpDir() * spanOfHandle * 5f + SideDir() * spanOfString * 2f;
                         break;
                     default:
                         pos = Center();
@@ -198,10 +198,9 @@ namespace ShatterOrb
             }
             else
             {
-                pos = Center() + UpDir() * spanOfHangle * 5f;
+                pos = Center() + UpDir() * spanOfHandle * 5f;
             }
             return pos;
-
         }
 
         public override Quaternion GetRot(int index, Rigidbody rb, BladePart part)
@@ -282,9 +281,9 @@ namespace ShatterOrb
         public override void Update()
         {
             base.Update();
-            emptyHandle.transform.position = Center() + UpDir() * spanOfHangle * 5f;
+            emptyHandle.transform.position = Center() + UpDir() * spanOfHandle * 5f;
             emptyHandle.transform.rotation = Quaternion.LookRotation(ForwardDir());
-            if(Math.Abs(Vector3.Distance(emptyHandle.transform.position, sword.GetPart(nbProjectileSlingshot).item.transform.position)) < 0.05f && disableColliders)
+            if (Math.Abs(Vector3.Distance(emptyHandle.transform.position, sword.GetPart(nbProjectileSlingshot).item.transform.position)) < 0.05f && disableColliders)
             {
                 sword.GetPart(nbProjectileSlingshot).item.IgnoreCollision(false);
                 disableColliders = false;
@@ -295,7 +294,6 @@ namespace ShatterOrb
                 sword.GetPart(nbProjectileSlingshot).Detach();
                 throwJoint = Snippet.CreateSlingshotJoint(sword.GetPart(nbProjectileSlingshot).item.rb, emptyHandle, 130f, 0f);
             }
-
             if (grabbedShard && !shardThrowed && Math.Abs(Vector3.Distance(emptyHandle.transform.position, sword.GetPart(nbProjectileSlingshot).item.transform.position)) < 0.05f && sword.GetPart(nbProjectileSlingshot).item.mainHandler == null)
             {
                 UnityEngine.Object.Destroy(throwJoint);
@@ -338,7 +336,7 @@ namespace ShatterOrb
                             break;
                         // Go to part
                         case 1:
-                            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 25f, 1f);
+                            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f, 1f);
                             sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
                             break;
                     }
@@ -436,8 +434,65 @@ namespace ShatterOrb
             disableColliders = false;
             stepTarget = 0;
             stepBounce = 0;
-            
             sword.GetPart(nbProjectileSlingshot).item.mainCollisionHandler.OnCollisionStartEvent -= MainCollisionHandler_OnCollisionStartEvent;
+        }
+
+        public override bool GetUseAnnotationShown() => true;
+        public override bool GetAltUseAnnotationShown() => true;
+        public override string GetUseAnnotation()
+        {
+            if (grabbedShard && !shardThrowed)
+            {
+                if (IsTriggerPressed() && !IsButtonPressed())
+                {
+                    return "Release it while maintaining the trigger launch a targeting projectile";
+                }
+                else if (!IsTriggerPressed() && IsButtonPressed())
+                {
+                    return "Release it while maintaining the trigger launch a bouncing projectile";
+                }
+                else
+                {
+                    return "";
+                }
+            }
+            else
+            {
+                if (IsTriggerPressed() && !IsButtonPressed())
+                {
+                    return "Grab the shard and pull it to launch a targeting projectile";
+                }
+                else if (!IsTriggerPressed() && IsButtonPressed())
+                {
+                    return "Grab the shard and pull it to launch a bouncing projectile";
+                }
+                else
+                {
+                    return "";
+                }
+            }
+        }
+        public override string GetAltUseAnnotation()
+        {
+            if (shardThrowed)
+            {
+                if (!IsTriggerPressed() && !IsButtonPressed())
+                {
+                    return "Hold trigger then tap the spell wheel button to recall the shard";
+                }
+                else if (IsTriggerPressed() && !IsButtonPressed())
+                {
+                    return "Tap the spell wheel button to recall the shard";
+                }
+                else
+                {
+                    return "";
+                }
+            }
+            else
+            {
+                return "";
+            }
         }
 
         public override bool ShouldReform(BladePart part) => part != sword.GetPart(nbProjectileSlingshot);
