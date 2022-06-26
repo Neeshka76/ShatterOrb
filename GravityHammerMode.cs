@@ -133,7 +133,7 @@ namespace ShatterOrb
                 {
                     item.rb.AddExplosionForce(Vector3.Distance(hit.contactPoint, item.transform.position) * hit.impactVelocity.magnitude * (item.rb.mass < 2f ? 2f : item.rb.mass) / 2f, hit.contactPoint, radiusOfImpact, 1f, ForceMode.Impulse);
                 }
-                foreach(Creature creature in Snippet.CreaturesInRadiusMinusPlayer(hit.contactPoint, radiusOfImpact))
+                foreach(Creature creature in Snippet.CreaturesInRadius(hit.contactPoint, radiusOfImpact))
                 {
                     if(creature.state == Creature.State.Alive && creature.state != Creature.State.Destabilized)
                     {

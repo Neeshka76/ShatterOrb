@@ -35,6 +35,11 @@ namespace ShatterOrb
         private int nbMaxBounce = 4;
         private int nbBounce = 0;
         private bool disableColliders = false;
+        private float timeBeforeNextDecap = 0.2f;
+        private float timeNextDecap;
+        private float distanceToThrow = 0.5f;
+        private float timeWaitForImpact = 0.5f;
+        private float timeThrowForImpact;
 
         public RagdollHand OtherHand() => GetPart().item.mainHandler.otherHand;
 
@@ -76,14 +81,16 @@ namespace ShatterOrb
             {
                 if (targetMode && (ragdollPart.type == RagdollPart.Type.Neck || ragdollPart.type == RagdollPart.Type.Torso || ragdollPart.type == RagdollPart.Type.Head))
                 {
-                    ragdollPart.ragdoll.headPart.Slice();
+                    ragdollPart.ragdoll.headPart.TrySlice();
                     ragdollPart.ragdoll.creature.Kill();
                     sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                     sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.up * 5f + (partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 2f, ForceMode.Impulse);
+                    timeNextDecap = Time.time;
                     stepTarget = 2;
                 }
                 if (bounceMode)
                 {
+                    
                     sword.GetPart(nbProjectileSlingshot).item.Depenetrate();
                     sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(Vector3.Reflect(hit.impactVelocity.normalized, hit.contactNormal) * 0.75f, ForceMode.VelocityChange);
                     stepBounce = 0;
@@ -310,11 +317,11 @@ namespace ShatterOrb
                     {
                         // search for part
                         case 0:
-                            if (Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget, true) != null)
+                            if (Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, creatureToExclude: creatureTarget, includeCreatureExcludedIfDefault: true) != null)
                             {
                                 nbBounce = 0;
-                                creatureTarget = Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false, creatureTarget, true);
-                                shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget, 0b11111111111, partTarget);
+                                creatureTarget = Snippet.RandomCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, creatureToExclude: creatureTarget, includeCreatureExcludedIfDefault: true);
+                                shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget, 0b00011111111111, partTarget);
                                 if (justHit && partTarget != null)
                                 {
                                     sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((partTarget.transform.position - sword.GetPart(nbProjectileSlingshot).item.transform.position).normalized * 0.1f, ForceMode.Impulse);
@@ -338,54 +345,62 @@ namespace ShatterOrb
                         case 1:
                             sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f, 1f);
                             sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
+                            if (((shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position) - sword.GetPart(nbProjectileSlingshot).item.rb.position).sqrMagnitude < (distanceToThrow * distanceToThrow))
+                            {
+                                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce((shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position - sword.GetPart(nbProjectileSlingshot).item.rb.position).normalized * 5f, ForceMode.Impulse);
+                                sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
+                                timeThrowForImpact = Time.time;
+                                stepBounce = 2;
+                            }
+                            break;
+                        case 2:
+                            if (Time.time - timeThrowForImpact > timeWaitForImpact)
+                            {
+                                stepBounce = 0;
+                            }
                             break;
                     }
                 }
                 else if (targetMode)
                 {
-                    GameManager.local.StartCoroutine(TargetMode());
+                    switch (stepTarget)
+                    {
+                        // search for part
+                        case 0:
+                            if (Snippet.ClosestCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f) != null)
+                            {
+                                creatureTarget = Snippet.ClosestCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget ? 20f : 10f);
+                                shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget, 0b00000000000010);
+                                partTarget = shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb];
+                                initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
+                                stepTarget = 1;
+                            }
+                            else
+                            {
+                                sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(sword.GetPart(nbProjectileSlingshot).item.rb.velocity.normalized * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 1f, ForceMode.Impulse);
+                                sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
+                                if (justHit)
+                                {
+                                    Reform();
+                                }
+                            }
+                            break;
+                        // Go to part
+                        case 1:
+                            sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f, 1f);
+                            sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
+                            break;
+                        // Pause
+                        case 2:
+                            if (Time.time - timeBeforeNextDecap > timeNextDecap)
+                                stepTarget = 0;
+                            break;
+                    }
                 }
                 else
                 {
                     stopThrow = true;
                 }
-            }
-        }
-
-        public IEnumerator TargetMode()
-        {
-            switch (stepTarget)
-            {
-                // search for part
-                case 0:
-                    if (Snippet.ClosestCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget == null ? 20f : 10f, false, false) != null)
-                    {
-                        creatureTarget = Snippet.ClosestCreatureInRadius(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget ? 20f : 10f, false, false);
-                        shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb] = Snippet.ClosestRagdollPart(sword.GetPart(nbProjectileSlingshot).item.rb.position, creatureTarget, 0b00000000010);
-                        partTarget = shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb];
-                        initialDistance = Vector3.Distance(sword.GetPart(nbProjectileSlingshot).item.rb.position, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position);
-                        stepTarget = 1;
-                    }
-                    else
-                    {
-                        sword.GetPart(nbProjectileSlingshot).item.rb.AddForce(sword.GetPart(nbProjectileSlingshot).item.rb.velocity.normalized * sword.GetPart(nbProjectileSlingshot).item.rb.velocity.magnitude * 1f, ForceMode.Impulse);
-                        sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
-                        if (justHit)
-                        {
-                            Reform();
-                        }
-                    }
-                    yield break;
-                // Go to part
-                case 1:
-                    sword.GetPart(nbProjectileSlingshot).item.rb.velocity = Snippet.HomingTarget(sword.GetPart(nbProjectileSlingshot).item.rb, shardToPart[sword.GetPart(nbProjectileSlingshot).item.rb].transform.position, initialDistance, 20f, 1f);
-                    sword.GetPart(nbProjectileSlingshot).item.Throw(1, Item.FlyDetection.Forced);
-                    yield break;
-                // Pause
-                case 2:
-                    yield return new WaitForSeconds(0.2f);
-                    stepTarget = 0;
-                    yield break;
             }
         }
 

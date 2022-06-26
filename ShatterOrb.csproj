@@ -34,7 +34,8 @@
     <Reference Include="DaggerBending">
       <HintPath>.\DaggerBending.dll</HintPath>
     </Reference>
-    <Reference Include="Shatterblade">
+    <Reference Include="Shatterblade, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>.\Shatterblade.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -131,8 +132,9 @@
     <Compile Include="GravityHammerMode.cs" />
     <Compile Include="ShatterOrbMode.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SnippetCode.cs" />
     <Compile Include="DaggerMode.cs" />
+    <Compile Include="SnippetCode.cs" />
+    <Compile Include="SpellDagger.cs" />
     <Compile Include="WingMode.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -32,8 +32,8 @@ namespace ShatterOrb
 
         public override void Enter(Shatterblade.Shatterblade sword)
         {
-            orbPart = sword.jointRBs.Where(rb => rb.name != $"Blade_{partPicked}").ToList();
             base.Enter(sword);
+            orbPart = sword.jointRBs.Where(rb => rb.name != $"Blade_{partPicked}").ToList();
             targetCreatures = new List<Creature>();
             targetParts = new List<RagdollPart>();
             isTargeting = false;
@@ -91,7 +91,7 @@ namespace ShatterOrb
             base.OnTriggerPressed();
             if (!isTargeting && !isThrowing)
             {
-                targetCreatures = Snippet.CreaturesInRadiusMinusPlayer(originOfOrb, 5f).Where(cr => cr.state != Creature.State.Dead).ToList();
+                targetCreatures = Snippet.CreaturesInRadius(originOfOrb, 5f).ToList();
                 if (targetCreatures != null)
                 {
                     isTargeting = true;

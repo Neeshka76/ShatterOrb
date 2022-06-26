@@ -168,7 +168,7 @@ namespace ShatterOrb
                     if (canPush)
                     {
                         Vector3 centralDirectionOfWings = (ForwardDir() + ForwardDirOtherHand()).normalized;
-                        foreach (Creature creature in Snippet.CreaturesInConeRadiusMinusPlayer(Player.local.creature.transform.position, 5f, centralDirectionOfWings, angleOfPush))
+                        foreach (Creature creature in Snippet.CreaturesInConeRadius(Player.local.creature.transform.position, 5f, centralDirectionOfWings, angleOfPush, true, true))
                         {
                             if (creature.state == Creature.State.Alive && creature.state != Creature.State.Destabilized)
                             {
